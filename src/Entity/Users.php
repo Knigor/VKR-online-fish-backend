@@ -6,9 +6,11 @@ use App\Repository\UsersRepository;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\Mapping as ORM;
+use Symfony\Component\Security\Core\User\PasswordAuthenticatedUserInterface;
+use Symfony\Component\Security\Core\User\UserInterface;
 
 #[ORM\Entity(repositoryClass: UsersRepository::class)]
-class Users
+class Users implements UserInterface, PasswordAuthenticatedUserInterface
 {
     #[ORM\Id]
     #[ORM\GeneratedValue]
@@ -18,7 +20,7 @@ class Users
     #[ORM\Column(length: 255)]
     private ?string $nameUser = null;
 
-    #[ORM\Column(length: 255)]
+    #[ORM\Column(length: 255, unique: true)]
     private ?string $email = null;
 
     #[ORM\Column(length: 255)]
@@ -28,7 +30,7 @@ class Users
     private ?string $phone = null;
 
     #[ORM\Column(length: 40)]
-    private ?string $role = null;
+    private ?string $role = 'ROLE_USER';
 
     /**
      * @var Collection<int, Products>
@@ -140,6 +142,34 @@ class Users
 
         return $this;
     }
+
+    // регализация интерфейсов безопасности
+
+    public function getUserIdentifier(): string
+    {
+        return (string) $this->email;
+    }
+
+    public function getPassword(): ?string
+    {
+        return $this->passwordHash;
+    }
+
+    /**
+     * @return string[]
+     */
+    public function getRoles(): array
+    {
+        return [$this->role ?? 'ROLE_USER'];
+    }
+
+    public function setRoles(array $roles): static
+    {
+        // Можно выбрать первую роль из массива (если предполагается только одна)
+        $this->role = $roles[0] ?? 'ROLE_USER';
+        return $this;
+    }
+
 
     /**
      * @return Collection<int, Products>
@@ -319,5 +349,10 @@ class Users
         }
 
         return $this;
+    }
+
+    public function eraseCredentials(): void
+    {
+        // TODO: Implement eraseCredentials() method.
     }
 }
