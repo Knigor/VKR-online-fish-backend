@@ -29,6 +29,9 @@ class Review
     #[ORM\ManyToOne(inversedBy: 'reviewId')]
     private ?Users $users = null;
 
+    #[ORM\Column]
+    private ?bool $isModerate = null;
+
     public function getId(): ?int
     {
         return $this->id;
@@ -97,6 +100,18 @@ class Review
     public function setUsers(?Users $users): static
     {
         $this->users = $users;
+
+        return $this;
+    }
+
+    public function isModerate(): ?bool
+    {
+        return $this->isModerate;
+    }
+
+    public function setIsModerate(bool $isModerate): static
+    {
+        $this->isModerate = $isModerate;
 
         return $this;
     }

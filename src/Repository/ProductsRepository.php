@@ -3,6 +3,7 @@
 namespace App\Repository;
 
 use App\Entity\Products;
+use App\Entity\Categories;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
 
@@ -16,28 +17,65 @@ class ProductsRepository extends ServiceEntityRepository
         parent::__construct($registry, Products::class);
     }
 
-    //    /**
-    //     * @return Products[] Returns an array of Products objects
-    //     */
-    //    public function findByExampleField($value): array
-    //    {
-    //        return $this->createQueryBuilder('p')
-    //            ->andWhere('p.exampleField = :val')
-    //            ->setParameter('val', $value)
-    //            ->orderBy('p.id', 'ASC')
-    //            ->setMaxResults(10)
-    //            ->getQuery()
-    //            ->getResult()
-    //        ;
-    //    }
+    /**
+     * Находит товары с учетом фильтрации и поиска
+     */
+    public function findWithFiltersAndSearch(string $sort = 'default', string $search = '')
+    {
+        $qb = $this->createQueryBuilder('p');
 
-    //    public function findOneBySomeField($value): ?Products
-    //    {
-    //        return $this->createQueryBuilder('p')
-    //            ->andWhere('p.exampleField = :val')
-    //            ->setParameter('val', $value)
-    //            ->getQuery()
-    //            ->getOneOrNullResult()
-    //        ;
-    //    }
+        // Добавляем поиск, если есть поисковый запрос
+        if (!empty($search)) {
+            $qb->andWhere('p.nameProduct LIKE :search OR p.descriptionProduct LIKE :search')
+                ->setParameter('search', '%' . $search . '%');
+        }
+
+        // Добавляем сортировку
+        switch ($sort) {
+            case 'price_asc':
+                $qb->orderBy('p.priceProduct', 'ASC');
+                break;
+            case 'price_desc':
+                $qb->orderBy('p.priceProduct', 'DESC');
+                break;
+            default:
+                // Сортировка по умолчанию (можно изменить на нужную)
+                $qb->orderBy('p.id', 'ASC');
+                break;
+        }
+
+        return $qb->getQuery()->getResult();
+    }
+
+    /**
+     * Находит товары по категории с учетом фильтрации и поиска
+     */
+    public function findByCategoryWithFiltersAndSearch(Categories $category, string $sort = 'default', string $search = '')
+    {
+        $qb = $this->createQueryBuilder('p')
+            ->where('p.categories = :category')
+            ->setParameter('category', $category);
+
+        // Добавляем поиск, если есть поисковый запрос
+        if (!empty($search)) {
+            $qb->andWhere('p.nameProduct LIKE :search OR p.descriptionProduct LIKE :search')
+                ->setParameter('search', '%' . $search . '%');
+        }
+
+        // Добавляем сортировку
+        switch ($sort) {
+            case 'price_asc':
+                $qb->orderBy('p.priceProduct', 'ASC');
+                break;
+            case 'price_desc':
+                $qb->orderBy('p.priceProduct', 'DESC');
+                break;
+            default:
+                // Сортировка по умолчанию (можно изменить на нужную)
+                $qb->orderBy('p.id', 'ASC');
+                break;
+        }
+
+        return $qb->getQuery()->getResult();
+    }
 }

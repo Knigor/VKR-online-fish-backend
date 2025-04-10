@@ -16,8 +16,8 @@ security:
                 check_path: /api/login_check
                 username_path: email
                 password_path: password
-               # success_handler: App\Security\CustomAuthenticationSuccessHandler
-                success_handler: lexik_jwt_authentication.handler.authentication_success
+                success_handler: App\Security\JWTLoginSuccessHandler
+               # success_handler: lexik_jwt_authentication.handler.authentication_success
                 failure_handler: lexik_jwt_authentication.handler.authentication_failure
 
         api:
@@ -25,6 +25,7 @@ security:
             stateless: true
             methods: ["OPTIONS", "GET", "POST", "PUT", "DELETE"]
             jwt: ~
+
 
     access_control:
         - { path: ^/api/register, roles: PUBLIC_ACCESS }

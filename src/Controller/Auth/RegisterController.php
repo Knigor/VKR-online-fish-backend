@@ -4,10 +4,10 @@ namespace App\Controller\Auth;
 
 use App\Dto\RegisterUserDto;
 use App\Entity\Users;
-use App\Service\UserRegistrationService;
 use Doctrine\ORM\EntityManagerInterface;
 use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTTokenManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
+use Symfony\Component\HttpFoundation\Cookie;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -46,6 +46,7 @@ class RegisterController extends AbstractController
                 return $this->json(['message' => 'Email already registered'], Response::HTTP_CONFLICT);
             }
 
+            // Создание нового пользователя
             $user = new Users();
             $user
                 ->setNameUser($registerDto->nameUser)
@@ -57,10 +58,26 @@ class RegisterController extends AbstractController
             $em->persist($user);
             $em->flush();
 
-            // Генерация JWT токена
-            $token = $jwtManager->create($user);
+            // Генерация access_token
+            $accessToken = $jwtManager->create($user);
 
-            return $this->json([
+            // Генерация refresh_token
+            $refreshTokenPayload = [
+                'username' => $user->getUserIdentifier(),
+                'exp' => time() + 60 * 60 * 24 * 7 // 7 дней
+            ];
+            $refreshToken = base64_encode(json_encode($refreshTokenPayload));
+
+            // Установка refresh_token в HttpOnly cookie
+            $refreshTokenCookie = Cookie::create('refresh_token')
+                ->withValue($refreshToken)
+                ->withHttpOnly(true)
+                ->withSameSite('Strict')
+                ->withPath('/')
+                ->withExpires(strtotime('+7 days'));
+
+            // Ответ с токеном и данными пользователя
+            $response = new JsonResponse([
                 'message' => 'User registered successfully',
                 'user' => [
                     'id' => $user->getId(),
@@ -68,8 +85,12 @@ class RegisterController extends AbstractController
                     'name' => $user->getNameUser(),
                     'role' => $user->getRole(),
                 ],
-                'access_token' => $token
+                'access_token' => $accessToken
             ], Response::HTTP_CREATED);
+
+            $response->headers->setCookie($refreshTokenCookie);
+
+            return $response;
         } catch (\Exception $e) {
             return $this->json([
                 'message' => 'Registration failed',

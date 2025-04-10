@@ -52,6 +52,9 @@ class Products
     #[ORM\OneToMany(targetEntity: OrderItems::class, mappedBy: 'productId')]
     private Collection $orderItems;
 
+    #[ORM\Column(length: 100, nullable: true)]
+    private ?string $productWeight = null;
+
     public function __construct()
     {
         $this->reviews = new ArrayCollection();
@@ -222,6 +225,18 @@ class Products
                 $orderItem->setProductId(null);
             }
         }
+
+        return $this;
+    }
+
+    public function getProductWeight(): ?string
+    {
+        return $this->productWeight;
+    }
+
+    public function setProductWeight(?string $productWeight): static
+    {
+        $this->productWeight = $productWeight;
 
         return $this;
     }
