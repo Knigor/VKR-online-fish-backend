@@ -72,7 +72,8 @@ class RegisterController extends AbstractController
             $refreshTokenCookie = Cookie::create('refresh_token')
                 ->withValue($refreshToken)
                 ->withHttpOnly(true)
-                ->withSameSite('Strict')
+                ->withSameSite('lax')
+                ->withSecure(false)
                 ->withPath('/')
                 ->withExpires(strtotime('+7 days'));
 

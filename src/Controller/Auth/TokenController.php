@@ -37,7 +37,17 @@ class TokenController extends AbstractController
 
         $accessToken = $jwtManager->create($user);
 
-        return $this->json(['access_token' => $accessToken]);
+        // Возвращаем access_token и данные пользователя
+        return $this->json([
+            'access_token' => $accessToken,
+            'user' => [
+                'id' => $user->getId(),
+                'name' => $user->getNameUser(),
+                'email' => $user->getEmail(),
+                'phone' => $user->getPhone(),
+                'role' => $user->getRole()
+            ]
+        ]);
     }
 
 

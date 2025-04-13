@@ -48,7 +48,9 @@ class JWTLoginSuccessHandler implements AuthenticationSuccessHandlerInterface
         $refreshTokenCookie = Cookie::create('refresh_token')
             ->withValue($refreshToken)
             ->withHttpOnly(true)
-            ->withSameSite('Strict')
+            ->withSameSite('lax') // вместо 'none'
+           // ->withDomain('localhost') // Явно указать
+            ->withSecure(false)
             ->withPath('/')
             ->withExpires(strtotime('+7 days'));
 
