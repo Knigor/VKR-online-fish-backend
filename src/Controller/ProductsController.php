@@ -48,8 +48,52 @@ class ProductsController extends AbstractController
         return $this->json($productData);
     }
 
+    // Метод на получение категорий
+
+    #[Route('/api/categories', name: 'api_get_categories', methods: ['GET'])]
+    public function getCategories(CategoriesRepository $categoriesRepository): JsonResponse
+    {
+        $categories = $categoriesRepository->findBy([], ['id' => 'ASC']);
+
+        $categoriesData = [];
+        foreach ($categories as $category) {
+            $categoriesData[] = [
+                'id' => $category->getId(),
+                'name' => $category->getNameCategories(),
+            ];
+        }
+
+        return $this->json($categoriesData);
+    }
+
+    // получаем товар по категории
+    #[Route('/api/products/{id}', name: 'api_get_product_by_id', methods: ['GET'])]
+    public function getProductById(int $id, ProductsRepository $productsRepository): JsonResponse
+    {
+        $product = $productsRepository->find($id);
+
+        if (!$product) {
+            return $this->json(['message' => 'Product not found'], Response::HTTP_NOT_FOUND);
+        }
+
+        $productData = [
+            'id' => $product->getId(),
+            'nameProduct' => $product->getNameProduct(),
+            'descriptionProduct' => $product->getDescriptionProduct(),
+            'priceProduct' => $product->getPriceProduct(),
+            'quantityProduct' => $product->getQuantityProduct(),
+            'imageUrlProduct' => $product->getImageUrlProduct(),
+            'typeProducts' => $product->getTypeProducts(),
+            'categoryId' => $product->getCategories()->getId(),
+            'productWeight' => $product->getProductWeight(),
+        ];
+
+        return $this->json($productData);
+    }
+
+
     // Метод для получения товаров по категории с фильтрацией и поиском
-    #[Route('/api/products/category', name: 'api_get_products_by_category', methods: ['GET'])]
+    #[Route('/api/productsCategory/', name: 'api_get_products_by_category', methods: ['GET'])]
     public function getProductsByCategory(
         Request $request,
         ProductsRepository $productsRepository,
