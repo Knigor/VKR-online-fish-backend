@@ -138,18 +138,26 @@ class ProductsController extends AbstractController
 
 
     // Метод для добавления товара с загрузкой изображения
-    #[Route('/api/products', name: 'api_add_product_form_data', methods: ['POST'])]
-    public function addProductFormData(Request $request, EntityManagerInterface $em): JsonResponse
+    #[Route('/api/products', name: 'api_add_product', methods: ['POST'])]
+    public function addProduct(Request $request, EntityManagerInterface $em): JsonResponse
     {
-        $nameProduct = $request->get('nameProduct');
-        $descriptionProduct = $request->get('descriptionProduct');
-        $priceProduct = $request->get('priceProduct');
-        $quantityProduct = $request->get('quantityProduct');
-        $productWeight = $request->get('productWeight');
-        $imageUrlProduct = $request->files->get('imageUrlProduct');
-        $typeProducts = $request->get('typeProducts');
-        $categoryId = $request->get('categoryId');
-        $userId = $request->get('userId'); // Получаем userId
+        $data = json_decode($request->getContent(), true);
+
+        // Валидация обязательных полей
+        if (!isset($data['nameProduct']) || !isset($data['categoryId']) || !isset($data['userId'])) {
+            return $this->json(['message' => 'Required fields are missing'], Response::HTTP_BAD_REQUEST);
+        }
+
+        // Получаем данные из JSON
+        $nameProduct = $data['nameProduct'];
+        $descriptionProduct = $data['descriptionProduct'] ?? null;
+        $priceProduct = $data['priceProduct'] ?? 0;
+        $quantityProduct = $data['quantityProduct'] ?? 0;
+        $productWeight = $data['productWeight'] ?? 0;
+        $imageUrl = $data['imageUrl'] ?? null; // Теперь просто принимаем ссылку
+        $typeProducts = $data['typeProducts'] ?? null;
+        $categoryId = $data['categoryId'];
+        $userId = $data['userId'];
 
         // Получаем категорию и пользователя
         $category = $em->getRepository(Categories::class)->find($categoryId);
@@ -163,12 +171,6 @@ class ProductsController extends AbstractController
             return $this->json(['message' => 'User not found'], Response::HTTP_BAD_REQUEST);
         }
 
-        // Перемещаем загруженное изображение в папку
-        $imageUrl = null;
-        if ($imageUrlProduct instanceof UploadedFile) {
-            $imageUrl = $this->uploadImage($imageUrlProduct);
-        }
-
         // Создаем новый товар
         $product = new Products();
         $product->setNameProduct($nameProduct)
@@ -176,20 +178,42 @@ class ProductsController extends AbstractController
             ->setPriceProduct($priceProduct)
             ->setQuantityProduct($quantityProduct)
             ->setProductWeight($productWeight)
-            ->setImageUrlProduct($imageUrl)
+            ->setImageUrlProduct($imageUrl) // Просто сохраняем ссылку
             ->setTypeProducts($typeProducts)
             ->setCategories($category)
-            ->setUsers($user); // Устанавливаем пользователя
+            ->setUsers($user);
 
         $em->persist($product);
         $em->flush();
 
-        return $this->json(['message' => 'Product added successfully']);
+        return $this->json([
+            'message' => 'Product added successfully',
+            'productId' => $product->getId()
+        ], Response::HTTP_CREATED);
+    }
+
+    // Метод для удаления товара
+    #[Route('/api/products/{id}', name: 'api_delete_product', methods: ['DELETE'])]
+    public function deleteProduct(
+        int $id,
+        ProductsRepository $productsRepository,
+        EntityManagerInterface $em
+    ): JsonResponse {
+        $product = $productsRepository->find($id);
+
+        if (!$product) {
+            return $this->json(['message' => 'Product not found'], Response::HTTP_NOT_FOUND);
+        }
+
+        $em->remove($product);
+        $em->flush();
+
+        return $this->json(['message' => 'Product deleted successfully']);
     }
 
     // Метод для редактирования товара с загрузкой изображения
-    #[Route('/api/products/{id}', name: 'api_edit_product_form_data', methods: ['POST'])]
-    public function editProductFormData(Request $request, ProductsRepository $productsRepository, EntityManagerInterface $em, int $id): JsonResponse
+    #[Route('/api/products/{id}', name: 'api_edit_product', methods: ['PUT'])]
+    public function editProduct(Request $request, ProductsRepository $productsRepository, EntityManagerInterface $em, int $id): JsonResponse
     {
         $product = $productsRepository->find($id);
 
@@ -197,16 +221,20 @@ class ProductsController extends AbstractController
             return $this->json(['message' => 'Product not found'], Response::HTTP_NOT_FOUND);
         }
 
-        // Получаем данные из FormData
-        $nameProduct = $request->get('nameProduct', $product->getNameProduct());
-        $descriptionProduct = $request->get('descriptionProduct', $product->getDescriptionProduct());
-        $priceProduct = $request->get('priceProduct', $product->getPriceProduct());
-        $quantityProduct = $request->get('quantityProduct', $product->getQuantityProduct());
-        $productWeight = $request->get('productWeight', $product->getProductWeight());
-        $imageUrlProduct = $request->files->get('imageUrlProduct');
-        $typeProducts = $request->get('typeProducts', $product->getTypeProducts());
-        $categoryId = $request->get('categoryId');
-        $userId = $request->get('userId'); // Получаем userId для редактирования
+        $data = json_decode($request->getContent(), true);
+
+        // Получаем данные из JSON (используем существующие значения как fallback)
+        $nameProduct = $data['nameProduct'] ?? $product->getNameProduct();
+        $descriptionProduct = $data['descriptionProduct'] ?? $product->getDescriptionProduct();
+        $priceProduct = $data['priceProduct'] ?? $product->getPriceProduct();
+        $quantityProduct = $data['quantityProduct'] ?? $product->getQuantityProduct();
+        $productWeight = $data['productWeight'] ?? $product->getProductWeight();
+        $imageUrl = $data['imageUrl'] ?? $product->getImageUrlProduct(); // Просто принимаем ссылку
+        $typeProducts = $data['typeProducts'] ?? $product->getTypeProducts();
+
+        // Категория и пользователь - если не указаны, оставляем текущие
+        $categoryId = $data['categoryId'] ?? $product->getCategories()->getId();
+        $userId = $data['userId'] ?? $product->getUsers()->getId();
 
         // Получаем категорию и пользователя
         $category = $em->getRepository(Categories::class)->find($categoryId);
@@ -226,19 +254,17 @@ class ProductsController extends AbstractController
             ->setPriceProduct($priceProduct)
             ->setQuantityProduct($quantityProduct)
             ->setProductWeight($productWeight)
+            ->setImageUrlProduct($imageUrl) // Просто сохраняем ссылку
             ->setTypeProducts($typeProducts)
             ->setCategories($category)
-            ->setUsers($user); // Обновляем пользователя
-
-        // Если файл изображения был загружен, сохраняем его
-        if ($imageUrlProduct instanceof UploadedFile) {
-            $imageUrl = $this->uploadImage($imageUrlProduct);
-            $product->setImageUrlProduct($imageUrl);
-        }
+            ->setUsers($user);
 
         $em->flush();
 
-        return $this->json(['message' => 'Product updated successfully']);
+        return $this->json([
+            'message' => 'Product updated successfully',
+            'productId' => $product->getId()
+        ]);
     }
 
     // Вспомогательный метод для загрузки изображения

@@ -23,7 +23,7 @@ class OrderReviewController extends AbstractController
     #[Route('/', name: 'api_get_orders', methods: ['GET'])]
     public function getOrders(OrdersRepository $ordersRepository): JsonResponse
     {
-        $orders = $ordersRepository->findAll();
+        $orders = $ordersRepository->findBy([], ['id' => 'ASC']);
         $ordersData = [];
 
         foreach ($orders as $order) {
