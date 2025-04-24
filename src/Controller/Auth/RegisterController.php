@@ -85,6 +85,7 @@ class RegisterController extends AbstractController
                     'email' => $user->getEmail(),
                     'name' => $user->getNameUser(),
                     'role' => $user->getRole(),
+                    'phone' => $user->getPhone(),
                 ],
                 'access_token' => $accessToken
             ], Response::HTTP_CREATED);
